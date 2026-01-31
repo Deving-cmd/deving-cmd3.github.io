@@ -70,14 +70,25 @@
 
     /* Noscript fallback */
     noscript .needs-js { display: none !important; }
+
+    /* Force the unlock card and the main card to be visible */
+.wrap, .card, #gate {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Make sure the main section starts hidden until the gate is passed */
+#main {
+  display: none;
+}
+  
   </style>
 </head>
 <body>
   
-<h1 style="position:fixed;top:20px;left:20px;z-index:9999;color:black;background:white;padding:10px;">
-HELLO I AM HERE
-</h1>
-
   <div class="wrap">
     <!-- UNLOCK: visible by default (no JS required to SEE it) -->
     <div id="gate" class="card">
