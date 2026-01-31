@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Be My Valentine</title>
+  <style>
+    :root {
+      --pink1: #ffdde1;
+      --pink2: #ee9ca7;
+      --glass: rgba(255, 255, 255, 0.35);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --text: #4a2c2a;
+      --accent: #e91e63;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--pink1), var(--pink2));
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    /* Floating hearts background */
+    .hearts {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0.25;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+    }
+    .heart {
+      position: absolute;
+      font-size: clamp(18px, 4vw, 34px);
+      animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+    }
+
+    .card {
+      position: relative;
+      width: min(680px, 92vw);
+      padding: 28px 22px 30px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      backdrop-filter: blur(8px);
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(26px, 5vw, 40px);
+      line-height: 1.2;
+    }
+    p.sub { margin: 0 0 22px; opacity: 0.9; }
+
+    .buttons {
+      position: relative;
+      margin-top: 8px;
+      height: 140px; /* room for runaway button */
+    }
+    button {
+      appearance: none;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 999px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.2s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #noBtn {
+      background: white;
+      color: var(--text);
+      margin: 0 10px;
+    }
+    #noBtn:hover { transform: translateY(-1px); }
+    #yesBtn {
+      position: absolute; /* will be moved around */
+      background: var(--accent);
+      color: white;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #yesBtn:active { transform: scale(0.98); }
+
+    /* Gate overlay (two-step Q&A) */
+    .lock {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+      display: grid;
+      place-items: center;
+      z-index: 9999;
+    }
+    .lock .panel {
+      width: min(460px, 92vw);
+      background: rgba(255,255,255,0.65);
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 16px;
+      padding: 22px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .lock h2 { margin: 0 0 10px; }
+    .lock p { margin: 6px 0 16px; opacity: 0.9; }
+    .row { display: flex; gap: 10px; justify-content: center; }
+    input[type="text"] {
+      width: 70%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #d48aa0;
+      font-size: 16px;
+      outline: none;
+    }
+    .enterBtn {
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .error {
+      color: #b00020;
+      font-size: 14px;
+      min-height: 18px;
+    }
+
+    /* Mute button (after unlock) */
+    .mute {
+      position: fixed;
+      top: 12px; right: 12px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+      z-index: 999;
+    }
+
+    @media (max-width: 420px) {
+      .buttons { height: 180px; }
+      button { font-size: 15px; padding: 12px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating hearts -->
+  <div class="hearts" aria-hidden="true" id="hearts"></div>
+
+  <!-- Main card -->
+  <div class="card" id="mainCard" hidden>
+    <h1>Will you be my Valentine?</h1>
+    <p class="sub">Please choose an answer below.</p>
+
+    <div class="buttons" id="btnArea">
+      <button id="noBtn" type="button" title="No">No</button>
+      <button id="yesBtn" type="button" title="Yes">Yes</button>
+    </div>
+  </div>
+
+  <!-- Two-step “password” gate -->
+  <div class="lock" id="lock">
+    <div class="panel">
+      <h2 id="gateTitle">Hey cutie 💘 what’s your name?</h2>
+      <p id="gateSub">Type your name below to continue.</p>
+      <div class="row" style="margin-bottom:10px;">
+        <input id="gateInput" type="text" placeholder="Your answer…" autocomplete="off" />
+        <button class="enterBtn" id="gateBtn" type="button">Continue</button>
+      </div>
+      <div class="error" id="err"></div>
+      <p id="hint" style="font-size:12px; opacity:.75; margin-top:6px;">
+        (Tip: spelling matters a little 💕)
+      </p>
+    </div>
+  </div>
+
+  <!-- Mute/Unmute (optional) -->
+  <button class="mute" id="muteBtn" aria-pressed="false">🔊 Sound On</button>
+
+  <script>
+    // ===== Configuration =====
+    // Acceptable answers (case-insensitive, trimmed)
+    const NAME_ANSWERS = ["prathadhya"]; // step 1
+    const WHO_ANSWERS  = ["devin"];      // step 2
+
+    // ===== Elements =====
+    const lock = document.getElementById("lock");
+    const gateTitle = document.getElementById("gateTitle");
+    const gateSub = document.getElementById("gateSub");
+    const gateInput = document.getElementById("gateInput");
+    const gateBtn = document.getElementById("gateBtn");
+    const err = document.getElementById("err");
+    const hint = document.getElementById("hint");
+    const mainCard = document.getElementById("mainCard");
+    const muteBtn = document.getElementById("muteBtn");
+
+    // State: 1 = ask name, 2 = ask who I am
+    let step = 1;
+    function norm(v) { return (v || "").trim().toLowerCase(); }
+
+    function setStep(newStep) {
+      step = newStep;
+      err.textContent = "";
+      gateInput.value = "";
+      if (step === 1) {
+        gateTitle.textContent = "Hey cutie 💘 what’s your name?";
+        gateSub.textContent = "Type your name below to continue.";
+        gateInput.placeholder = "Your name…";
+        gateBtn.textContent = "Continue";
+        hint.textContent = "(Tip: spelling matters a little 💕)";
+      } else {
+        gateTitle.textContent = "Okay then, who do you think I am? 😊";
+        gateSub.textContent = "If you really know me, you know this!";
+        gateInput.placeholder = "Your answer…";
+        gateBtn.textContent = "Unlock";
+        hint.textContent = "(Tiny hint: starts with D 😉)";
+      }
+      setTimeout(() => gateInput.focus(), 50);
+    }
+
+    function tryAdvance() {
+      const answer = norm(gateInput.value);
+      if (step === 1) {
+        if (NAME_ANSWERS.includes(answer)) {
+          setStep(2);
+        } else {
+          err.textContent = "Hmm, that doesn’t seem right. Try again 😉";
+        }
+      } else if (step === 2) {
+        if (WHO_ANSWERS.includes(answer)) {
+          unlockPage();
+        } else {
+          err.textContent = "Almost! Think again 🥰";
+        }
+      }
+    }
+
+    gateBtn.addEventListener("click", tryAdvance);
+    gateInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryAdvance();
+    });
+
+    // Initialize gate
+    setStep(1);
+
+    // ===== Floating Hearts Generator =====
+    const hearts = document.getElementById("hearts");
+    const EMOJIS = ["💗","💖","💘","💞","💓","💝"];
+    function spawnHearts() {
+      for (let i = 0; i < 14; i++) {
+        const span = document.createElement("span");
+        span.className = "heart";
+        span.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+        const duration = 8 + Math.random() * 10;
+        const delay = -Math.random() * duration;
+        span.style.left = Math.random() * 100 + "vw";
+        span.style.animationDuration = duration + "s";
+        span.style.animationDelay = delay + "s";
+        hearts.appendChild(span);
+      }
+    }
+    spawnHearts();
+
+    // ===== Buttons logic =====
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const btnArea = document.getElementById("btnArea");
+
+    function moveYes() {
+      const areaRect = btnArea.getBoundingClientRect();
+      const btnRect = yesBtn.getBoundingClientRect();
+      const padding = 8;
+      const maxLeft = Math.max(areaRect.width - btnRect.width - padding, 0);
+      const maxTop  = Math.max(areaRect.height - btnRect.height - padding, 0);
+      const newLeft = padding + Math.random() * maxLeft;
+      const newTop  = padding + Math.random() * maxTop;
+      yesBtn.style.left = newLeft + "px";
+      yesBtn.style.top  = newTop + "px";
+      yesBtn.style.transform = "translate(0, 0)";
+    }
+    yesBtn.addEventListener("mouseenter", moveYes);
+    yesBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      moveYes();
+    }, { passive: false });
+
+    // ===== Audio setup =====
+    // Put bg.mp3 (soft loop), yes.mp3 (romantic), no.mp3 (playful/sad) in the SAME folder as this HTML.
+    const tracks = {
+      bg:  new Audio("bg.mp3"),
+      yes: new Audio("yes.mp3"),
+      no:  new Audio("no.mp3"),
+    };
+
+    // Background loop (continuous)
+    tracks.bg.loop = true;
+    tracks.bg.volume = 0.35; // gentle background
+    // Yes track (loop — keeps playing after she says Yes)
+    tracks.yes.loop = true;
+    tracks.yes.volume = 0.8;
+    // No sfx (one-shot)
+    tracks.no.loop = false;
+    tracks.no.volume = 0.9;
+
+    let muted = false;
+
+    function stopAllExceptBg() {
+      ["yes","no"].forEach(k => {
+        tracks[k].pause();
+        tracks[k].currentTime = 0;
+      });
+    }
+
+    function stopAll() {
+      Object.values(tracks).forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+      });
+    }
+
+    async function play(name) {
+      if (muted) return;
+      try {
+        await tracks[name].play();
+      } catch (e) {
+        console.warn("Audio play blocked or failed:", e);
+      }
+    }
+
+    // Ducking helper: lower bg volume temporarily when a foreground sound plays
+    function duckBackground(tempVolume = 0.12, ms = 1600) {
+      const prev = tracks.bg.volume;
+      tracks.bg.volume = tempVolume;
+      setTimeout(() => { tracks.bg.volume = prev; }, ms);
+    }
+
+    // Unlock page and start background music
+    function unlockPage() {
+      lock.style.display = "none";
+      mainCard.hidden = false;
+      muteBtn.style.display = "inline-block";
+      document.getElementById("noBtn").focus();
+
+      // Start background loop (user clicked Unlock, so it's a user gesture)
+      stopAll();
+      play("bg");
+    }
+
+    // Mute toggle
+    muteBtn.addEventListener("click", () => {
+      muted = !muted;
+      if (muted) {
+        stopAll();
+        muteBtn.textContent = "🔇 Sound Off";
+      } else {
+        // resume bg if unmuted (but don't auto-start yes/no)
+        play("bg");
+        muteBtn.textContent = "🔊 Sound On";
+      }
+      muteBtn.setAttribute("aria-pressed", String(!muted));
+    });
+
+    // Button actions + music
+    yesBtn.addEventListener("click", async () => {
+      // Lower background a bit and start the romantic loop
+      duckBackground(0.08, 2500);
+      stopAllExceptBg();
+      await play("yes");
+      setTimeout(() => {
+        alert("Congratulations! You are my Valentine. <3");
+      }, 120);
+    });
+
+    noBtn.addEventListener("click", async () => {
+      duckBackground(0.10, 1200);
+      stopAllExceptBg();
+      await play("no");
+      noBtn.textContent = "Are you sure? 😜";
+      setTimeout(() => (noBtn.textContent = "No"), 1200);
+    });
+
+    // Initial placement
+    window.addEventListener("load", () => {
+      setTimeout(moveYes, 100);
+    });
+  </script>
+</body>
+</html>
