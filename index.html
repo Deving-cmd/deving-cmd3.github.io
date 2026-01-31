@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Valentine</title>
   <style>
-    :root {
-      color-scheme: dark;
-    }
+    :root { color-scheme: dark; }
     body {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
@@ -26,22 +24,143 @@
       padding: 24px 22px;
       box-shadow: 0 18px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.03);
     }
-    h1 {
-      margin: 0 0 8px;
-      font-size: clamp(28px, 3.2vw, 38px);
-      letter-spacing: .3px;
-    }
+    h1 { margin: 0 0 8px; font-size: clamp(28px, 3.2vw, 38px); letter-spacing: .3px; }
     p { margin: 0 0 16px; color: #cccccc; }
     .btns { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
     button {
-      appearance: none;
-      border: none;
-      cursor: pointer;
-      padding: 12px 18px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
+      appearance: none; border: none; cursor: pointer;
+      padding: 12px 18px; border-radius: 12px; font-size: 16px; font-weight: 600;
       transition: transform .05s ease, filter .2s ease, background .2s ease;
     }
     button:active { transform: translateY(1px) scale(.99); }
     #yesBtn { background: #2ecc71; color: #0a3d1f; }
+    #noBtn  { background: #ff6b6b; color: #5c0000; }
+    #muteBtn { background:#3a3a3a; color:#f1f1f1; margin-left:auto; }
+
+    /* Autoplay unlock overlay */
+    #unlockOverlay {
+      position: fixed; inset: 0; display: none; place-items: center;
+      background: rgba(0,0,0,.78); z-index: 9999;
+    }
+    #unlockOverlay .box {
+      background:#202020; border:1px solid #333; border-radius:12px;
+      padding:20px 22px; width:min(420px, 92vw); text-align:center; color:#ffeaa7;
+      box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    }
+    #unlockBtn { margin-top:10px; background:#ffd166; color:#4a3d00; }
+    .row { display:flex; align-items:center; gap:10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <h1 style="flex:1 1 auto;">Be my Valentine?</h1>
+      <button id="muteBtn" type="button" aria-pressed="false" title="Toggle sound">🔊 Sound On</button>
+    </div>
+    <p>Pick one:</p>
+    <div class="btns">
+      <button id="yesBtn" type="button" aria-label="Yes">Yes</button>
+      <button id="noBtn"  type="button" aria-label="No">No</button>
+    </div>
+  </div>
+
+  <!-- Overlay only shown if autoplay is blocked -->
+  <div id="unlockOverlay" aria-hidden="true">
+    <div class="box">
+      <div>🔊 Tap to start the background music</div>
+      <button id="unlockBtn" type="button">Play</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== Audio setup (exclusive playback) =====
+    // Files must be in the same folder as index.html:
+    // bg.mp3, yes.mp3, no.mp3
+    const tracks = {
+      bg:  new Audio("./bg.mp3"),
+      yes: new Audio("./yes.mp3"),
+      no:  new Audio("./no.mp3"),
+    };
+
+    // Config
+    tracks.bg.loop = true;   tracks.bg.volume = 0.35;
+    tracks.yes.loop = true;  tracks.yes.volume = 0.85;
+    tracks.no.loop  = false; tracks.no.volume  = 0.95;
+
+    // Preload (helps reduce delay)
+    ["bg","yes","no"].forEach(k => {
+      tracks[k].preload = "auto";
+      try { tracks[k].load(); } catch {}
+    });
+
+    function stopAll() {
+      Object.values(tracks).forEach(a => { a.pause(); a.currentTime = 0; });
+    }
+
+    async function playExclusive(name) {
+      stopAll();
+      try { await tracks[name].play(); }
+      catch (e) { console.error("playExclusive failed for", name, e); throw e; }
+    }
+
+    // ===== UI elements
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn  = document.getElementById("noBtn");
+    const muteBtn = document.getElementById("muteBtn");
+    const unlockOverlay = document.getElementById("unlockOverlay");
+    const unlockBtn = document.getElementById("unlockBtn");
+
+    let muted = false;
+
+    function showUnlock(){ unlockOverlay.style.display = "grid"; }
+    function hideUnlock(){ unlockOverlay.style.display = "none"; }
+
+    // Try autoplay bg; if blocked, show overlay
+    async function tryAutoplayBG() {
+      try { await playExclusive("bg"); hideUnlock(); }
+      catch { showUnlock(); }
+    }
+
+    unlockBtn.addEventListener("click", async () => {
+      await playExclusive("bg");
+      hideUnlock();
+    });
+
+    // Mute toggles all audio; unmute resumes bg only
+    muteBtn.addEventListener("click", () => {
+      muted = !muted;
+      if (muted) {
+        stopAll();
+        muteBtn.textContent = "🔇 Sound Off";
+      } else {
+        playExclusive("bg");
+        muteBtn.textContent = "🔊 Sound On";
+      }
+      muteBtn.setAttribute("aria-pressed", String(!muted));
+    });
+
+    // YES: stop bg, then play yes.mp3 (exclusive)
+    yesBtn.addEventListener("click", async () => {
+      if (muted) return;
+      await playExclusive("yes");
+      setTimeout(() => alert("Congratulations! You are my Valentine. <3"), 120);
+    });
+
+    // NO: stop bg, then play no.mp3 (exclusive)
+    noBtn.addEventListener("click", async () => {
+      if (muted) return;
+      await playExclusive("no");
+      const old = noBtn.textContent;
+      noBtn.textContent = "Are you sure? 😜";
+      setTimeout(() => (noBtn.textContent = old), 1200);
+    });
+
+    // Start
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", tryAutoplayBG, { once:true });
+    } else {
+      tryAutoplayBG();
+    }
+  </script>
+</body>
+</html>
