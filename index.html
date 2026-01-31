@@ -4,7 +4,6 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Valentine</title>
-  <link rel="icon" href="data:,">
   <style>
     /* --- Romantic base --- */
     html, body { height: 100%; }
@@ -14,18 +13,21 @@
       background: radial-gradient(1000px 700px at 20% 15%, #ffe7ef 0%, #ffd5e4 40%, #ffc9db 65%, #fbd3e9 100%);
       color: #2b2b2b;
       min-height: 100vh;
-      overflow: hidden; /* keep particles in frame */
+      overflow: hidden;           /* keeps particles in frame */
     }
 
     /* ---- Love animation layer (behind content) ---- */
     .bg-love {
       position: fixed; inset: 0;
-      pointer-events: none;
+      pointer-events: none;       /* clicks pass through */
       z-index: 0;
     }
     .hearts {
-      position: absolute; inset: 0; overflow: hidden;
+      position: absolute; inset: 0;
+      overflow: hidden;
     }
+
+    /* CSS heart built from a square + two circles */
     .heart {
       position: absolute;
       width: var(--size, 16px);
@@ -34,7 +36,7 @@
       background: var(--col, #ff6b9b);
       opacity: var(--op, .16);
       left: var(--left, 50vw);
-      bottom: -12vh;
+      bottom: -12vh;                   /* start below view */
       filter: drop-shadow(0 2px 4px rgba(255, 105, 180, .25));
       will-change: transform;
       animation:
@@ -49,21 +51,28 @@
       background: inherit;
       border-radius: 50%;
     }
-    .heart::before { top: -50%; left: 0; }
-    .heart::after  { left: 50%;  top: 0; }
+    .heart::before { top: -50%; left: 0;    } /* top lobe */
+    .heart::after  { left: 50%;  top: 0;    } /* right lobe */
 
+    /* A very subtle pulsing center heart for ambience */
     .pulse-heart {
       position: absolute;
       left: 50%; top: 50%;
       width: 160px; height: 160px;
       transform: translate(-50%, -50%) rotate(-45deg);
       background: #ff6b9b;
-      opacity: .07; filter: blur(1px); border-radius: 8px;
+      opacity: .07;
+      filter: blur(1px);
+      border-radius: 8px;
       animation: pulse 3.8s ease-in-out infinite alternate;
     }
-    .pulse-heart::before, .pulse-heart::after {
-      content: ""; position: absolute; width: 100%; height: 100%;
-      background: #ff6b9b; border-radius: 50%;
+    .pulse-heart::before,
+    .pulse-heart::after {
+      content: "";
+      position: absolute;
+      width: 100%; height: 100%;
+      background: #ff6b9b;
+      border-radius: 50%;
     }
     .pulse-heart::before { top: -50%; left: 0; }
     .pulse-heart::after  { left: 50%;  top: 0; }
@@ -80,14 +89,16 @@
       from { transform: translate(-50%, -50%) rotate(-45deg) scale(0.95); opacity: .06; }
       to   { transform: translate(-50%, -50%) rotate(-45deg) scale(1.06);  opacity: .09; }
     }
+
+    /* Respect users who prefer reduced motion */
     @media (prefers-reduced-motion: reduce) {
-      .heart, .pulse-heart, .val-card, .confetti-heart { animation: none !important; }
+      .heart, .pulse-heart { animation: none !important; }
     }
 
     /* ---- Foreground content ---- */
     .wrap {
       position: relative;
-      z-index: 1; /* above hearts */
+      z-index: 1;                 /* above hearts */
       width: min(680px, 92vw);
       margin: min(8vh, 48px) auto;
     }
@@ -116,7 +127,7 @@
     .btn:active { transform: translateY(1px); }
     .hint { font-size: 13px; color: #b02656; min-height: 18px; }
 
-    /* Main (hidden until answers are correct) */
+    /* Main (hidden until answers correct) */
     #main { display: none; }
     .question { font-size: 20px; font-weight: 800; color: #8a0039; text-align: center; }
     .btns { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
@@ -126,3 +137,239 @@
       padding: 12px 18px; font-weight: 800; cursor: pointer;
     }
 
+    /* Playground for the 'No' button */
+    .playground {
+      position: relative; height: 220px; margin-top: 14px;
+      border: 1px dashed #f2aac5; border-radius: 14px;
+      background: rgba(255,255,255,.75);
+      display: grid; place-items: center; overflow: hidden;
+    }
+    #noBtn {
+      position: absolute;
+      background: #ff6b6b; color: #5c0000;
+      border: 0; border-radius: 12px;
+      padding: 12px 18px; font-weight: 800; cursor: pointer;
+      user-select: none; touch-action: none;
+    }
+
+    /* Unlock is definitely visible on load */
+    .wrap, #gate {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: relative !important;
+      z-index: 10 !important;
+    }
+
+    /* Fade-out helper for the unlock card */
+    .fade-out {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      transition: opacity .35s ease, visibility .35s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated romantic background -->
+  <div class="bg-love" aria-hidden="true">
+    <div class="hearts"></div>
+    <div class="pulse-heart"></div>
+  </div>
+
+  <div class="wrap">
+    <!-- UNLOCK -->
+    <div id="gate" class="card" role="dialog" aria-modal="true" aria-label="Unlock questions">
+      <h2>Hey cutie 💖</h2>
+
+      <div id="step1">
+        <div class="q">Who are you?</div>
+        <div class="row">
+          <input id="a1" type="text" placeholder="Type your name…" autocomplete="off"/>
+          <button id="next1" class="btn" type="button">Continue</button>
+        </div>
+        <div id="hint1" class="hint"></div>
+      </div>
+
+      <div id="step2" style="display:none;">
+        <div class="q">Hmm… if you are <strong>Prathadhya</strong>, who do you think I am?</div>
+        <div class="row">
+          <input id="a2" type="text" placeholder="Your guess…" autocomplete="off"/>
+          <button id="next2" class="btn" type="button">Enter</button>
+        </div>
+        <div id="hint2" class="hint"></div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main" class="card" role="region" aria-live="polite">
+      <div class="question">Do you want to be my Valentine? 💘</div>
+
+      <div class="btns">
+        <button id="yesBtn" type="button">Yes</button>
+      </div>
+
+      <div id="field" class="playground">
+        <button id="noBtn" type="button" aria-label="No">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio tags -->
+  <audio id="bg"  src="./bg.mp3"  preload="auto"></audio>
+  <audio id="yes" src="./yes.mp3" preload="auto"></audio>
+  <audio id="no"  src="./no.mp3"  preload="auto"></audio>
+
+  <script>
+    /* ---------------- Hearts generator (lightweight) ---------------- */
+    const heartsHost = document.querySelector(".hearts");
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function createFloatingHearts(count = 24) {
+      if (prefersReduced) return;
+      for (let i = 0; i < count; i++) {
+        const h = document.createElement("div");
+        h.className = "heart";
+        // Randomize visuals with CSS variables
+        const size   = 12 + Math.random() * 18; // px
+        const left   = Math.random() * 100;     // vw
+        const dur    = 12 + Math.random() * 16; // 12–28s
+        const delay  = -Math.random() * dur;    // start mid-animation
+        const swayDur= 5 + Math.random() * 6;   // 5–11s
+        const swayDel= Math.random() * 6;
+        const op     = 0.12 + Math.random() * 0.14;
+        const hue    = 338 + Math.random() * 12;   // pink range
+        const col    = `hsl(${hue}deg, 85%, 68%)`;
+
+        h.style.setProperty("--size",  size + "px");
+        h.style.setProperty("--left",  left + "vw");
+        h.style.setProperty("--dur",   dur + "s");
+        h.style.setProperty("--delay", delay + "s");
+        h.style.setProperty("--swayDur", swayDur + "s");
+        h.style.setProperty("--swayDelay", swayDel + "s");
+        h.style.setProperty("--op", op.toFixed(2));
+        h.style.setProperty("--col", col);
+
+        heartsHost.appendChild(h);
+      }
+    }
+    createFloatingHearts(26);
+
+    /* ---------------- Core UI / Audio logic (your original behavior) ---------------- */
+    const $ = sel => document.querySelector(sel);
+    const norm = s => (s || "").trim().toLowerCase();
+
+    const gate  = $("#gate");
+    const main  = $("#main");
+    const step1 = $("#step1");
+    const step2 = $("#step2");
+    const a1    = $("#a1");
+    const a2    = $("#a2");
+    const next1 = $("#next1");
+    const next2 = $("#next2");
+    const hint1 = $("#hint1");
+    const hint2 = $("#hint2");
+
+    const yesBtn = $("#yesBtn");
+    const noBtn  = $("#noBtn");
+    const field  = $("#field");
+
+    // Audio (exclusive)
+    const tracks = {
+      bg:  $("#bg"),
+      yes: $("#yes"),
+      no:  $("#no"),
+    };
+    tracks.bg.loop = true; tracks.bg.volume = 0.40;
+    tracks.yes.loop = true; tracks.yes.volume = 0.85;
+    tracks.no.loop  = false; tracks.no.volume  = 0.95;
+
+    function stopAll(){ Object.values(tracks).forEach(a => { a.pause(); a.currentTime = 0; }); }
+    async function playExclusive(name){
+      stopAll();
+      try { await tracks[name].play(); } catch(e) { console.warn("Audio play failed:", name, e); }
+    }
+
+    // Gate step 1
+    next1.addEventListener("click", () => {
+      if (norm(a1.value) === "prathadhya") {
+        hint1.textContent = "";
+        step1.style.display = "none";
+        step2.style.display = "block";
+        a2.focus();
+      } else {
+        hint1.textContent = "Awww… this little surprise isn’t for you 🥲";
+        a1.focus();
+      }
+    });
+    a1.addEventListener("keydown", e => { if (e.key === "Enter") next1.click(); });
+
+    // Gate step 2 (success → start bg, show main, fade-out & remove gate)
+    next2.addEventListener("click", async () => {
+      if (norm(a2.value) === "devin") {
+        hint2.textContent = "";
+
+        await playExclusive("bg");
+        main.style.display = "block";
+        yesBtn.focus();
+
+        gate.setAttribute("aria-hidden", "true");
+        gate.classList.add("fade-out");
+        setTimeout(() => { if (gate && gate.parentNode) gate.parentNode.removeChild(gate); }, 400);
+
+      } else {
+        hint2.textContent = "Close… but not quite 😝";
+        a2.focus();
+      }
+    });
+    a2.addEventListener("keydown", e => { if (e.key === "Enter") next2.click(); });
+
+    // Yes: romantic confirm
+    yesBtn.addEventListener("click", async () => {
+      await playExclusive("yes");
+      setTimeout(() => alert("Congratulations! You are my Valentine. ❤️"), 150);
+    });
+
+    // Playful "No" button (still clickable)
+    function randomizeNoPosition() {
+      const rect = field.getBoundingClientRect();
+      const btn  = noBtn.getBoundingClientRect();
+      const pad  = 8;
+      const maxX = Math.max(pad, rect.width  - btn.width  - pad);
+      const maxY = Math.max(pad, rect.height - btn.height - pad);
+      noBtn.style.left = (pad + Math.random() * maxX) + "px";
+      noBtn.style.top  = (pad + Math.random() * maxY) + "px";
+    }
+    randomizeNoPosition();
+
+    let lastDodge = 0;
+    const DODGE_COOLDOWN_MS = 450;
+    const NEAR_RADIUS_PX = 80;
+
+    function maybeDodge() {
+      const now = performance.now();
+      if (now - lastDodge < DODGE_COOLDOWN_MS) return;
+      lastDodge = now;
+      randomizeNoPosition();
+    }
+
+    noBtn.addEventListener("mouseenter", maybeDodge);
+    noBtn.addEventListener("focus",     maybeDodge);
+    noBtn.addEventListener("touchstart", e => { e.preventDefault(); maybeDodge(); }, {passive:false});
+
+    noBtn.addEventListener("click", async () => {
+      await playExclusive("no");
+      noBtn.textContent = "Hey! 😜";
+      setTimeout(() => noBtn.textContent = "No", 700);
+      setTimeout(() => randomizeNoPosition(), 500);
+    });
+
+    field.addEventListener("mousemove", (e) => {
+      const b = noBtn.getBoundingClientRect();
+      const dx = Math.abs(e.clientX - (b.left + b.width/2));
+      const dy = Math.abs(e.clientY - (b.top  + b.height/2));
+      if (Math.hypot(dx, dy) < NEAR_RADIUS_PX) maybeDodge();
+    });
+  </script>
+</body>
+</html>
