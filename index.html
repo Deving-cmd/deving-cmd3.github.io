@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Valentine</title>
   <style>
-    /* --- Romantic but simple background --- */
     html, body { height: 100%; }
     body {
       margin: 0;
@@ -15,8 +14,6 @@
       display: grid;
       place-items: center;
     }
-
-    /* Layout containers */
     .wrap { width: min(680px, 92vw); }
     .card {
       background: #fff;
@@ -28,7 +25,6 @@
     h1, h2 { margin: 0 0 10px; }
     p  { margin: 0 0 14px; color: #444; }
 
-    /* Unlock (always visible by default so you never see just a pink screen) */
     #gate .q { font-weight: 700; color: #b1004c; margin: 10px 0; }
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     input[type="text"] {
@@ -38,12 +34,12 @@
     .btn {
       cursor: pointer; border: 0; border-radius: 10px;
       padding: 10px 16px; font-weight: 700; font-size: 15px;
-      background: #ff6b9b; color: #fff; box-shadow: 0 6px 18px rgba(255, 105, 180, .25);
+      background: #ff6b6b; color: #fff; box-shadow: 0 6px 18px rgba(255, 105, 180, .25);
     }
     .btn:active { transform: translateY(1px); }
     .hint { font-size: 13px; color: #b02656; min-height: 18px; }
 
-    /* Main (hidden until answers are correct) */
+    /* Main starts hidden */
     #main { display: none; }
     .question { font-size: 20px; font-weight: 800; color: #8a0039; text-align: center; }
     .btns { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
@@ -53,7 +49,6 @@
       padding: 12px 18px; font-weight: 800; cursor: pointer;
     }
 
-    /* Playground for the 'No' button that runs away */
     .playground {
       position: relative; height: 220px; margin-top: 14px;
       border: 1px dashed #f2aac5; border-radius: 14px;
@@ -68,7 +63,7 @@
       user-select: none; touch-action: none;
     }
 
-    /* Ensure visibility for unlock only (not the main yet) */
+    /* Ensure unlock is visible (but not the main) */
     .wrap, #gate {
       display: block !important;
       opacity: 1 !important;
@@ -76,12 +71,19 @@
       position: relative !important;
       z-index: 10 !important;
     }
+
+    /* Fade-out helper for the unlock card */
+    .fade-out {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      transition: opacity .35s ease, visibility .35s ease;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <!-- UNLOCK -->
-    <div id="gate" class="card">
+    <div id="gate" class="card" role="dialog" aria-modal="true" aria-label="Unlock questions">
       <h2>Hey cutie 💖</h2>
 
       <div id="step1">
@@ -117,17 +119,15 @@
     </div>
   </div>
 
-  <!-- Audio -->
+  <!-- Audio tags so play() has elements to use -->
   <audio id="bg"  src="./bg.mp3"  preload="auto"></audio>
   <audio id="yes" src="./yes.mp3" preload="auto"></audio>
   <audio id="no"  src="./no.mp3"  preload="auto"></audio>
 
   <script>
-    // ========= Utilities =========
     const $ = sel => document.querySelector(sel);
     const norm = s => (s || "").trim().toLowerCase();
 
-    // Inputs / buttons
     const gate  = $("#gate");
     const main  = $("#main");
     const step1 = $("#step1");
@@ -143,7 +143,6 @@
     const noBtn  = $("#noBtn");
     const field  = $("#field");
 
-    // Audio (exclusive)
     const tracks = {
       bg:  $("#bg"),
       yes: $("#yes"),
@@ -159,7 +158,7 @@
       try { await tracks[name].play(); } catch(e) { console.warn("Audio play failed:", name, e); }
     }
 
-    // ---- Gate logic ----
+    // Gate step 1
     next1.addEventListener("click", () => {
       if (norm(a1.value) === "prathadhya") {
         hint1.textContent = "";
@@ -173,13 +172,24 @@
     });
     a1.addEventListener("keydown", e => { if (e.key === "Enter") next1.click(); });
 
+    // Gate step 2 (success branch updated: fade-out and remove gate)
     next2.addEventListener("click", async () => {
       if (norm(a2.value) === "devin") {
         hint2.textContent = "";
-        gate.style.display = "none";
+
+        // Start bg music (user gesture)
+        await playExclusive("bg");
+
+        // Show main card
         main.style.display = "block";
-        await playExclusive("bg"); // start background loop
         yesBtn.focus();
+
+        // Fade-out and remove the gate
+        gate.setAttribute("aria-hidden", "true");
+        gate.classList.add("fade-out");
+        setTimeout(() => {
+          if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+        }, 400);
       } else {
         hint2.textContent = "Close… but not quite 😝";
         a2.focus();
@@ -187,28 +197,24 @@
     });
     a2.addEventListener("keydown", e => { if (e.key === "Enter") next2.click(); });
 
-    // ---- Main logic ----
+    // Main logic
     yesBtn.addEventListener("click", async () => {
       await playExclusive("yes");
       setTimeout(() => alert("Congratulations! You are my Valentine. ❤️"), 150);
     });
 
-    // Make the "No" button dodge but still clickable
+    // Playful "No" (still clickable)
     function randomizeNoPosition() {
       const rect = field.getBoundingClientRect();
       const btn  = noBtn.getBoundingClientRect();
       const pad  = 8;
       const maxX = Math.max(pad, rect.width  - btn.width  - pad);
       const maxY = Math.max(pad, rect.height - btn.height - pad);
-      const x = pad + Math.random() * maxX;
-      const y = pad + Math.random() * maxY;
-      noBtn.style.left = x + "px";
-      noBtn.style.top  = y + "px";
+      noBtn.style.left = (pad + Math.random() * maxX) + "px";
+      noBtn.style.top  = (pad + Math.random() * maxY) + "px";
     }
-    // Initial place
     randomizeNoPosition();
 
-    // Dodge with a cooldown so it's still possible to click
     let lastDodge = 0;
     const DODGE_COOLDOWN_MS = 450;
     const NEAR_RADIUS_PX = 80;
@@ -224,16 +230,13 @@
     noBtn.addEventListener("focus",     maybeDodge);
     noBtn.addEventListener("touchstart", e => { e.preventDefault(); maybeDodge(); }, {passive:false});
 
-    // If they manage to click it
     noBtn.addEventListener("click", async () => {
       await playExclusive("no");
       noBtn.textContent = "Hey! 😜";
       setTimeout(() => noBtn.textContent = "No", 700);
-      // Do not immediately dodge on click; give them a beat
       setTimeout(() => randomizeNoPosition(), 500);
     });
 
-    // Move if cursor gets close (respects cooldown)
     field.addEventListener("mousemove", (e) => {
       const b = noBtn.getBoundingClientRect();
       const dx = Math.abs(e.clientX - (b.left + b.width/2));
