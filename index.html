@@ -1,80 +1,47 @@
-<script>
-  // ===== Audio setup (exclusive playback) =====
-  // Ensure these files exist in the SAME folder as index.html:
-  // bg.mp3 (background), yes.mp3 (romantic), No.mp3 (playful/sad, capital N)
-  const tracks = {
-    bg:  new Audio("bg.mp3"),
-    yes: new Audio("yes.mp3"),
-    no:  new Audio("No.mp3"),   // case-sensitive
-  };
-
-  // Config
-  tracks.bg.loop = true;  tracks.bg.volume = 0.35;
-  tracks.yes.loop = true; tracks.yes.volume = 0.85;
-  tracks.no.loop  = false;tracks.no.volume  = 0.95;
-
-  // Preload (optional, helps reduce delay)
-  ["bg","yes","no"].forEach(k => {
-    tracks[k].preload = "auto";
-    tracks[k].load();
-  });
-
-  let muted = false;
-
-  function stopAll() {
-    Object.values(tracks).forEach(a => { a.pause(); a.currentTime = 0; });
-  }
-
-  // Play exactly one track; everything else stops first
-  async function playExclusive(name) {
-    if (muted) return;
-    stopAll();
-    try {
-      await tracks[name].play();
-    } catch (e) {
-      // Autoplay can be blocked until a user gesture. Our calls are from clicks, so should be fine.
-      console.warn("Audio play failed:", name, e);
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Valentine</title>
+  <style>
+    :root {
+      color-scheme: dark;
     }
-  }
-
-  // ===== Unlock page: start ONLY background loop =====
-  function unlockPage() {
-    lock.style.display = "none";
-    mainCard.hidden = false;
-    muteBtn.style.display = "inline-block";
-    document.getElementById("noBtn").focus();
-
-    // Start background (exclusive)
-    playExclusive("bg");
-  }
-
-  // ===== Mute toggle =====
-  muteBtn.addEventListener("click", () => {
-    muted = !muted;
-    if (muted) {
-      stopAll();
-      muteBtn.textContent = "🔇 Sound Off";
-    } else {
-      // When unmuting, resume background ONLY (don’t auto-play yes/no)
-      playExclusive("bg");
-      muteBtn.textContent = "🔊 Sound On";
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% 10%, #1f1f1f, #0e0e0e 70%);
+      color: #f7f7f7;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
     }
-    muteBtn.setAttribute("aria-pressed", String(!muted));
-  });
-
-  // ===== Button actions =====
-  // YES: stop bg, then play yes.mp3 (exclusive)
-  yesBtn.addEventListener("click", async () => {
-    await playExclusive("yes");
-    setTimeout(() => {
-      alert("Congratulations! You are my Valentine. <3");
-    }, 120);
-  });
-
-  // NO: stop bg, then play No.mp3 (exclusive)
-  noBtn.addEventListener("click", async () => {
-    await playExclusive("no");
-    noBtn.textContent = "Are you sure? 😜";
-    setTimeout(() => (noBtn.textContent = "No"), 1200);
-  });
-</script>
+    .card {
+      width: min(560px, 92vw);
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 18px;
+      padding: 24px 22px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 3.2vw, 38px);
+      letter-spacing: .3px;
+    }
+    p { margin: 0 0 16px; color: #cccccc; }
+    .btns { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform .05s ease, filter .2s ease, background .2s ease;
+    }
+    button:active { transform: translateY(1px) scale(.99); }
+    #yesBtn { background: #2ecc71; color: #0a3d1f; }
