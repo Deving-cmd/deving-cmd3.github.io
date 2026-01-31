@@ -1,145 +1,71 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Valentine</title>
   <style>
-    /* Simple, readable, not-black UI */
+    /* ------------------------------
+       Simple romantic background
+       ------------------------------ */
     :root { color-scheme: light dark; }
+    html, body { height: 100%; }
     body {
       margin: 0;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      min-height: 100vh; display: grid; place-items: center;
-      background: #fafafa; color: #111;
+      /* Soft pink → blush gradient */
+      background: radial-gradient(1200px 800px at 20% 10%, #ffe7ef 0%, #ffd5e4 40%, #ffc9db 65%, #fbd3e9 100%);
+      display: grid;
+      place-items: center;
+      color: #2b2b2b;
+      overflow: hidden;
     }
+
+    /* Subtle floating hearts */
+    .hearts {
+      position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+    }
+    .heart {
+      position: absolute;
+      width: 16px; height: 16px;
+      background:
+        radial-gradient(circle at 30% 30%, #ff6b9b 40%, transparent 43%) top left/50% 50% no-repeat,
+        radial-gradient(circle at 70% 30%, #ff6b9b 40%, transparent 43%) top right/50% 50% no-repeat,
+        linear-gradient(#ff6b9b, #ff6b9b) bottom/100% 60% no-repeat;
+      transform: rotate(-45deg);
+      opacity: .18;
+      animation: floatUp linear infinite;
+      border-radius: 2px;
+    }
+    @keyframes floatUp {
+      from { transform: translateY(20vh) rotate(-45deg); }
+      to   { transform: translateY(-120vh) rotate(-45deg); }
+    }
+
+    /* Containers */
+    .wrap { position: relative; z-index: 1; width: min(680px, 92vw); }
     .card {
-      width: min(560px, 92vw);
-      background: #fff; color: #222;
-      border: 1px solid #ddd; border-radius: 14px;
-      padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 12px 40px rgba(255, 105, 180, .15);
     }
-    h1 { margin: 0 0 8px; }
-    p { margin: 0 0 16px; color: #444; }
-    .btns { display: flex; gap: 12px; flex-wrap: wrap; }
-    button {
-      cursor: pointer; border: none; border-radius: 10px;
-      padding: 10px 16px; font-weight: 600; font-size: 16px;
+    h1 { margin: 0 0 10px; }
+    p  { margin: 0 0 16px; color: #444; }
+
+    /* Unlock modal (always shown first) */
+    .modal-backdrop {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      background: rgba(255, 210, 230, .55);
+      z-index: 3;
     }
-    #yesBtn { background: #2ecc71; color: #0a3d1f; }
-    #noBtn  { background: #ff6b6b; color: #5c0000; }
-
-    /* Autoplay unlock overlay (only shows if autoplay is blocked) */
-    #unlockOverlay {
-      position: fixed; inset: 0; display: none; place-items: center;
-      background: rgba(0,0,0,.65); z-index: 9999;
-    }
-    #unlockOverlay .box {
-      background: #ffffff; color: #222; padding: 20px 22px; border-radius: 12px;
-      width: min(420px, 92vw); text-align: center; border: 1px solid #ddd;
-      box-shadow: 0 12px 40px rgba(0,0,0,.3);
-    }
-    #unlockBtn { margin-top: 12px; background: #ffd166; color: #4a3d00; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Be my Valentine?</h1>
-    <p>Background music should start automatically. Choose one:</p>
-    <div class="btns">
-      <button id="yesBtn" type="button" aria-label="Yes">Yes</button>
-      <button id="noBtn"  type="button" aria-label="No">No</button>
-    </div>
-  </div>
-
-  <!-- Shown only if the browser blocks autoplay -->
-  <div id="unlockOverlay" aria-hidden="true">
-    <div class="box">
-      <div style="font-size:18px;">🔊 Tap to start the background music</div>
-      <button id="unlockBtn" type="button">Start</button>
-    </div>
-  </div>
-
-  <script>
-    // ==============================
-    //  Audio: exclusive playback
-    //  Files must sit next to index.html:
-    //    - bg.mp3
-    //    - yes.mp3
-    //    - no.mp3  (lowercase)
-    // ==============================
-    const tracks = {
-      bg:  new Audio("./bg.mp3"),
-      yes: new Audio("./yes.mp3"),
-      no:  new Audio("./no.mp3"),
-    };
-
-    // Config
-    tracks.bg.loop = true;   tracks.bg.volume = 0.40;
-    tracks.yes.loop = true;  tracks.yes.volume = 0.85;
-    tracks.no.loop  = false; tracks.no.volume  = 0.95;
-
-    // Preload to reduce delay (some browsers may ignore until gesture)
-    ["bg", "yes", "no"].forEach(k => { tracks[k].preload = "auto"; try { tracks[k].load(); } catch {} });
-
-    function stopAll() {
-      Object.values(tracks).forEach(a => { a.pause(); a.currentTime = 0; });
-    }
-
-    async function playExclusive(name) {
-      stopAll();
-      // On mobile, play() can reject without gesture only for the first call (autoplay)
-      await tracks[name].play();
-    }
-
-    // UI refs
-    const yesBtn = document.getElementById("yesBtn");
-    const noBtn  = document.getElementById("noBtn");
-    const unlockOverlay = document.getElementById("unlockOverlay");
-    const unlockBtn = document.getElementById("unlockBtn");
-
-    function showUnlock(){ unlockOverlay.style.display = "grid"; }
-    function hideUnlock(){ unlockOverlay.style.display = "none"; }
-
-    // Try autoplay bg on load; if blocked, show Start overlay
-    async function tryAutoplayBG() {
-      try {
-        await playExclusive("bg");
-        hideUnlock();
-      } catch (e) {
-        // Autoplay blocked until user interacts
-        showUnlock();
-        console.warn("Autoplay blocked; waiting for user gesture.", e);
-      }
-    }
-
-    // Start bg after a tap if autoplay blocked
-    unlockBtn.addEventListener("click", async () => {
-      try { await playExclusive("bg"); hideUnlock(); }
-      catch (e) { console.error("Could not start bg after gesture:", e); }
-    });
-
-    // Button behavior
-    yesBtn.addEventListener("click", async () => {
-      try {
-        await playExclusive("yes");
-        // Optional: small confirmation
-        setTimeout(() => alert("Congratulations! You are my Valentine. <3"), 120);
-      } catch (e) { console.error("Failed to play yes.mp3:", e); }
-    });
-
-    noBtn.addEventListener("click", async () => {
-      try {
-        await playExclusive("no");
-      } catch (e) { console.error("Failed to play no.mp3:", e); }
-    });
-
-    // Kick off autoplay attempt once DOM is ready
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", tryAutoplayBG, { once: true });
-    } else {
-      tryAutoplayBG();
-    }
-  </script>
-</body>
-</html>
+    .modal {
+      width: min(520px, 92vw);
+      background: #fff;
+      border: 1px solid #f0c3d4;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 18px 60px rgba(255, 105, 180, .25);
+      text-align: left;
