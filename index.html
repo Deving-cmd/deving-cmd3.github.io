@@ -2,70 +2,229 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Valentine</title>
   <style>
-    /* ------------------------------
-       Simple romantic background
-       ------------------------------ */
-    :root { color-scheme: light dark; }
+    /* --- Romantic but simple background --- */
     html, body { height: 100%; }
     body {
       margin: 0;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      /* Soft pink → blush gradient */
-      background: radial-gradient(1200px 800px at 20% 10%, #ffe7ef 0%, #ffd5e4 40%, #ffc9db 65%, #fbd3e9 100%);
+      background: radial-gradient(1000px 700px at 20% 15%, #ffe7ef 0%, #ffd5e4 40%, #ffc9db 65%, #fbd3e9 100%);
+      color: #2b2b2b;
       display: grid;
       place-items: center;
-      color: #2b2b2b;
-      overflow: hidden;
     }
 
-    /* Subtle floating hearts */
-    .hearts {
-      position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
-    }
-    .heart {
-      position: absolute;
-      width: 16px; height: 16px;
-      background:
-        radial-gradient(circle at 30% 30%, #ff6b9b 40%, transparent 43%) top left/50% 50% no-repeat,
-        radial-gradient(circle at 70% 30%, #ff6b9b 40%, transparent 43%) top right/50% 50% no-repeat,
-        linear-gradient(#ff6b9b, #ff6b9b) bottom/100% 60% no-repeat;
-      transform: rotate(-45deg);
-      opacity: .18;
-      animation: floatUp linear infinite;
-      border-radius: 2px;
-    }
-    @keyframes floatUp {
-      from { transform: translateY(20vh) rotate(-45deg); }
-      to   { transform: translateY(-120vh) rotate(-45deg); }
-    }
-
-    /* Containers */
-    .wrap { position: relative; z-index: 1; width: min(680px, 92vw); }
+    /* Layout containers */
+    .wrap { width: min(680px, 92vw); }
     .card {
-      background: rgba(255,255,255,.86);
-      backdrop-filter: blur(6px);
-      border: 1px solid rgba(0,0,0,.06);
-      border-radius: 16px;
-      padding: 22px;
-      box-shadow: 0 12px 40px rgba(255, 105, 180, .15);
-    }
-    h1 { margin: 0 0 10px; }
-    p  { margin: 0 0 16px; color: #444; }
-
-    /* Unlock modal (always shown first) */
-    .modal-backdrop {
-      position: fixed; inset: 0; display: grid; place-items: center;
-      background: rgba(255, 210, 230, .55);
-      z-index: 3;
-    }
-    .modal {
-      width: min(520px, 92vw);
       background: #fff;
       border: 1px solid #f0c3d4;
       border-radius: 16px;
       padding: 22px;
-      box-shadow: 0 18px 60px rgba(255, 105, 180, .25);
-      text-align: left;
+      box-shadow: 0 12px 40px rgba(255, 105, 180, .18);
+    }
+    h1, h2 { margin: 0 0 10px; }
+    p  { margin: 0 0 14px; color: #444; }
+
+    /* Unlock (always visible by default so you never see just a pink screen) */
+    #gate .q { font-weight: 700; color: #b1004c; margin: 10px 0; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input[type="text"] {
+      flex: 1 1 260px; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid #e9afc7; font-size: 16px; outline: none;
+    }
+    .btn {
+      cursor: pointer; border: 0; border-radius: 10px;
+      padding: 10px 16px; font-weight: 700; font-size: 15px;
+      background: #ff6b9b; color: #fff; box-shadow: 0 6px 18px rgba(255, 105, 180, .25);
+    }
+    .btn:active { transform: translateY(1px); }
+    .hint { font-size: 13px; color: #b02656; min-height: 18px; }
+
+    /* Main (hidden until answers are correct) */
+    #main { display: none; }
+    .question { font-size: 20px; font-weight: 800; color: #8a0039; text-align: center; }
+    .btns { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
+
+    #yesBtn {
+      background: #2ecc71; color: #0a3d1f; border: 0; border-radius: 12px;
+      padding: 12px 18px; font-weight: 800; cursor: pointer;
+    }
+
+    /* Playground for the 'No' button that runs away */
+    .playground {
+      position: relative; height: 220px; margin-top: 14px;
+      border: 1px dashed #f2aac5; border-radius: 14px;
+      background: rgba(255,255,255,.75);
+      display: grid; place-items: center; overflow: hidden;
+    }
+    #noBtn {
+      position: absolute;
+      background: #ff6b6b; color: #5c0000;
+      border: 0; border-radius: 12px;
+      padding: 12px 18px; font-weight: 800; cursor: pointer;
+      user-select: none; touch-action: none;
+    }
+
+    /* Noscript fallback */
+    noscript .needs-js { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- UNLOCK: visible by default (no JS required to SEE it) -->
+    <div id="gate" class="card">
+      <h2>Hey cutie 💖</h2>
+
+      <div id="step1">
+        <div class="q">Who are you?</div>
+        <div class="row">
+          <input id="a1" type="text" placeholder="Type your name…" autocomplete="off"/>
+          <button id="next1" class="btn needs-js" type="button">Continue</button>
+        </div>
+        <div id="hint1" class="hint"></div>
+      </div>
+
+      <div id="step2" style="display:none;">
+        <div class="q">Hmm… if you are <strong>Prathadhya</strong>, who do you think I am?</div>
+        <div class="row">
+          <input id="a2" type="text" placeholder="Your guess…" autocomplete="off"/>
+          <button id="next2" class="btn needs-js" type="button">Enter</button>
+        </div>
+        <div id="hint2" class="hint"></div>
+      </div>
+
+      <noscript>
+        <p style="margin-top:10px;color:#8a0039;"><strong>JavaScript is off.</strong> Turn it on so the surprise can play music and move the buttons ✨</p>
+      </noscript>
+    </div>
+
+    <!-- MAIN: shown only after correct answers -->
+    <div id="main" class="card" role="region" aria-live="polite">
+      <div class="question">Do you want to be my Valentine? 💘</div>
+
+      <div class="btns">
+        <button id="yesBtn" type="button">Yes</button>
+      </div>
+
+      <div id="field" class="playground">
+        <button id="noBtn" type="button" aria-label="No">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio elements for reliability (preload + visible fallback if paths are wrong) -->
+  <audio id="bg"  src="./bg.mp3"  preload="auto"></audio>
+  <audio id="yes" src="./yes.mp3" preload="auto"></audio>
+  <audio id="no"  src="./no.mp3"  preload="auto"></audio>
+
+  <script>
+    // ========= Utilities =========
+    const $ = sel => document.querySelector(sel);
+    const norm = s => (s || "").trim().toLowerCase();
+
+    // Inputs / buttons
+    const gate  = $("#gate");
+    const main  = $("#main");
+    const step1 = $("#step1");
+    const step2 = $("#step2");
+    const a1    = $("#a1");
+    const a2    = $("#a2");
+    const next1 = $("#next1");
+    const next2 = $("#next2");
+    const hint1 = $("#hint1");
+    const hint2 = $("#hint2");
+
+    const yesBtn = $("#yesBtn");
+    const noBtn  = $("#noBtn");
+    const field  = $("#field");
+
+    // Audio (exclusive)
+    const tracks = {
+      bg:  $("#bg"),
+      yes: $("#yes"),
+      no:  $("#no"),
+    };
+    tracks.bg.loop = true; tracks.bg.volume = 0.4;
+    tracks.yes.loop = true; tracks.yes.volume = 0.85;
+    tracks.no.loop  = false; tracks.no.volume  = 0.95;
+
+    function stopAll(){ Object.values(tracks).forEach(a => { a.pause(); a.currentTime = 0; }); }
+    async function playExclusive(name){
+      stopAll();
+      try { await tracks[name].play(); } catch(e) { console.warn("Audio play failed:", name, e); }
+    }
+
+    // ---- Gate logic ----
+    next1.addEventListener("click", () => {
+      if (norm(a1.value) === "prathadhya") {
+        hint1.textContent = "";
+        step1.style.display = "none";
+        step2.style.display = "block";
+        a2.focus();
+      } else {
+        hint1.textContent = "Awww… this little surprise isn’t for you 🥲";
+        a1.focus();
+      }
+    });
+    a1.addEventListener("keydown", e => { if (e.key === "Enter") next1.click(); });
+
+    next2.addEventListener("click", async () => {
+      if (norm(a2.value) === "devin") {
+        hint2.textContent = "";
+        gate.style.display = "none";
+        main.style.display = "block";
+        // Start bg music after a user gesture (this click)
+        await playExclusive("bg");
+        yesBtn.focus();
+      } else {
+        hint2.textContent = "Close… but not quite 😝";
+        a2.focus();
+      }
+    });
+    a2.addEventListener("keydown", e => { if (e.key === "Enter") next2.click(); });
+
+    // ---- Main logic ----
+    yesBtn.addEventListener("click", async () => {
+      await playExclusive("yes");
+      setTimeout(() => alert("Congratulations! You are my Valentine. ❤️"), 150);
+    });
+
+    // Make the "No" button dodge and play its sound if clicked
+    function randomizeNoPosition() {
+      const rect = field.getBoundingClientRect();
+      const btn  = noBtn.getBoundingClientRect();
+      const pad  = 8;
+      const maxX = Math.max(pad, rect.width  - btn.width  - pad);
+      const maxY = Math.max(pad, rect.height - btn.height - pad);
+      const x = pad + Math.random() * maxX;
+      const y = pad + Math.random() * maxY;
+      noBtn.style.left = x + "px";
+      noBtn.style.top  = y + "px";
+    }
+    // Initial place
+    randomizeNoPosition();
+
+    const dodge = () => randomizeNoPosition();
+    noBtn.addEventListener("mouseenter", dodge);
+    noBtn.addEventListener("focus", dodge);
+    noBtn.addEventListener("touchstart", e => { e.preventDefault(); dodge(); }, {passive:false});
+    noBtn.addEventListener("click", async () => {
+      await playExclusive("no");
+      noBtn.textContent = "Hey! 😜";
+      setTimeout(() => noBtn.textContent = "No", 900);
+      randomizeNoPosition();
+    });
+
+    // Bonus: move if cursor gets too close
+    field.addEventListener("mousemove", (e) => {
+      const b = noBtn.getBoundingClientRect();
+      const dx = Math.abs(e.clientX - (b.left + b.width/2));
+      const dy = Math.abs(e.clientY - (b.top  + b.height/2));
+      if (Math.hypot(dx, dy) < 60) randomizeNoPosition();
+    });
+  </script>
+</body>
+</html>
