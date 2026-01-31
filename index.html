@@ -44,7 +44,7 @@
     .hint { font-size: 13px; color: #b02656; min-height: 18px; }
 
     /* Main (hidden until answers are correct) */
-    #main { display: none; }
+    #main { display: none !important; }
     .question { font-size: 20px; font-weight: 800; color: #8a0039; text-align: center; }
     .btns { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
 
@@ -68,29 +68,19 @@
       user-select: none; touch-action: none;
     }
 
-    /* Noscript fallback */
-    noscript .needs-js { display: none !important; }
-
-    /* Force the unlock card and the main card to be visible */
-.wrap, .card, #gate {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  position: relative !important;
-  z-index: 10 !important;
-}
-
-/* Make sure the main section starts hidden until the gate is passed */
-#main {
-  display: none;
-}
-  
+    /* Ensure visibility for unlock only (not the main yet) */
+    .wrap, #gate {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: relative !important;
+      z-index: 10 !important;
+    }
   </style>
 </head>
 <body>
-  
   <div class="wrap">
-    <!-- UNLOCK: visible by default (no JS required to SEE it) -->
+    <!-- UNLOCK -->
     <div id="gate" class="card">
       <h2>Hey cutie 💖</h2>
 
@@ -98,7 +88,7 @@
         <div class="q">Who are you?</div>
         <div class="row">
           <input id="a1" type="text" placeholder="Type your name…" autocomplete="off"/>
-          <button id="next1" class="btn needs-js" type="button">Continue</button>
+          <button id="next1" class="btn" type="button">Continue</button>
         </div>
         <div id="hint1" class="hint"></div>
       </div>
@@ -107,17 +97,13 @@
         <div class="q">Hmm… if you are <strong>Prathadhya</strong>, who do you think I am?</div>
         <div class="row">
           <input id="a2" type="text" placeholder="Your guess…" autocomplete="off"/>
-          <button id="next2" class="btn needs-js" type="button">Enter</button>
+          <button id="next2" class="btn" type="button">Enter</button>
         </div>
         <div id="hint2" class="hint"></div>
       </div>
-
-      <noscript>
-        <p style="margin-top:10px;color:#8a0039;"><strong>JavaScript is off.</strong> Turn it on so the surprise can play music and move the buttons ✨</p>
-      </noscript>
     </div>
 
-    <!-- MAIN: shown only after correct answers -->
+    <!-- MAIN -->
     <div id="main" class="card" role="region" aria-live="polite">
       <div class="question">Do you want to be my Valentine? 💘</div>
 
@@ -131,7 +117,7 @@
     </div>
   </div>
 
-  <!-- Audio elements for reliability (preload + visible fallback if paths are wrong) -->
+  <!-- Audio -->
   <audio id="bg"  src="./bg.mp3"  preload="auto"></audio>
   <audio id="yes" src="./yes.mp3" preload="auto"></audio>
   <audio id="no"  src="./no.mp3"  preload="auto"></audio>
@@ -192,8 +178,7 @@
         hint2.textContent = "";
         gate.style.display = "none";
         main.style.display = "block";
-        // Start bg music after a user gesture (this click)
-        await playExclusive("bg");
+        await playExclusive("bg"); // start background loop
         yesBtn.focus();
       } else {
         hint2.textContent = "Close… but not quite 😝";
@@ -208,7 +193,7 @@
       setTimeout(() => alert("Congratulations! You are my Valentine. ❤️"), 150);
     });
 
-    // Make the "No" button dodge and play its sound if clicked
+    // Make the "No" button dodge but still clickable
     function randomizeNoPosition() {
       const rect = field.getBoundingClientRect();
       const btn  = noBtn.getBoundingClientRect();
@@ -223,23 +208,37 @@
     // Initial place
     randomizeNoPosition();
 
-    const dodge = () => randomizeNoPosition();
-    noBtn.addEventListener("mouseenter", dodge);
-    noBtn.addEventListener("focus", dodge);
-    noBtn.addEventListener("touchstart", e => { e.preventDefault(); dodge(); }, {passive:false});
+    // Dodge with a cooldown so it's still possible to click
+    let lastDodge = 0;
+    const DODGE_COOLDOWN_MS = 450;
+    const NEAR_RADIUS_PX = 80;
+
+    function maybeDodge() {
+      const now = performance.now();
+      if (now - lastDodge < DODGE_COOLDOWN_MS) return;
+      lastDodge = now;
+      randomizeNoPosition();
+    }
+
+    noBtn.addEventListener("mouseenter", maybeDodge);
+    noBtn.addEventListener("focus",     maybeDodge);
+    noBtn.addEventListener("touchstart", e => { e.preventDefault(); maybeDodge(); }, {passive:false});
+
+    // If they manage to click it
     noBtn.addEventListener("click", async () => {
       await playExclusive("no");
       noBtn.textContent = "Hey! 😜";
-      setTimeout(() => noBtn.textContent = "No", 900);
-      randomizeNoPosition();
+      setTimeout(() => noBtn.textContent = "No", 700);
+      // Do not immediately dodge on click; give them a beat
+      setTimeout(() => randomizeNoPosition(), 500);
     });
 
-    // Bonus: move if cursor gets too close
+    // Move if cursor gets close (respects cooldown)
     field.addEventListener("mousemove", (e) => {
       const b = noBtn.getBoundingClientRect();
       const dx = Math.abs(e.clientX - (b.left + b.width/2));
       const dy = Math.abs(e.clientY - (b.top  + b.height/2));
-      if (Math.hypot(dx, dy) < 60) randomizeNoPosition();
+      if (Math.hypot(dx, dy) < NEAR_RADIUS_PX) maybeDodge();
     });
   </script>
 </body>
